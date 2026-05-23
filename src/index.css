@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+:root {
+  /* Background Gradients */
+  --bg-app-from: theme('colors.indigo.950');
+  --bg-app-via: theme('colors.purple.900');
+  --bg-app-to: theme('colors.slate.900');
+
+  /* Header Gradients & Text */
+  --text-header-from: theme('colors.cyan.400');
+  --text-header-to: theme('colors.indigo.400');
+  --text-primary: theme('colors.indigo.300');
+  --text-primary-dim: theme('colors.indigo.200/70');
+
+  /* Player Variables */
+  --color-player-x: theme('colors.cyan.400');
+  --color-player-o: theme('colors.purple.400');
+  
+  /* Drop Shadows */
+  --shadow-player-x: 0 0 12px rgba(34, 211, 238, 0.6);
+  --shadow-player-o: 0 0 12px rgba(192, 132, 252, 0.6);
+
+  /* Turn Indicator Badge */
+  --badge-bg: theme('colors.cyan.500/20');
+  --badge-text: theme('colors.cyan.300');
+  --badge-border: theme('colors.cyan.500/30');
+
+  /* Buttons */
+  --btn-from: theme('colors.cyan.600');
+  --btn-to: theme('colors.indigo.600');
+  --btn-hover-from: theme('colors.cyan.500');
+  --btn-hover-to: theme('colors.indigo.500');
+  --btn-shadow: theme('colors.indigo.900/50');
+}
