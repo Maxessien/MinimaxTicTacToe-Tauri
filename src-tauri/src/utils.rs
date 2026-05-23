@@ -88,3 +88,16 @@ pub fn compute_optimal<'a>(node: &mut Node) -> Optimal {
 
     return optimal_child;
 }
+
+pub fn get_root_node() -> Node {
+    Node {
+        children: Vec::new(),
+        depth: 0,
+        is_leaf: false,
+        is_root: true,
+        level_player: PlayerType::Maximizer,
+        optimal_child: None,
+        score: BoardValues::Null,
+        static_node_state: get_empty_board(),
+    }
+}

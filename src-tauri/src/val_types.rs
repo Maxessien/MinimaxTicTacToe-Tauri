@@ -1,10 +1,12 @@
+use serde::{Serialize, Deserialize};
+
 
 #[derive(Clone, Copy)]
 pub enum BoardValues {
     High = 1, Draw = 0, Low = -1, Null = 4
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Deserialize)]
 pub enum PlayerType { Maximizer, Minimizer }
 
 #[derive(Clone)]
@@ -22,6 +24,7 @@ pub struct Node {
 #[derive(Clone)]
 pub struct Optimal {pub optimal: Node, pub depth: u32}
 
+#[derive(Serialize)]
 pub struct BoardFieldVal {
     pub row: u32, pub col: u32
 }
