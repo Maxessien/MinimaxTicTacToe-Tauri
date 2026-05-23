@@ -27,7 +27,7 @@ const App = () => {
     }));
   };
 
-  const userPlay = (player: Player, position: BoardFieldVal) => {
+  const userPlay = async(player: Player, position: BoardFieldVal) => {
     if (boardState.building) {
       toast.error("Game isn't ready, please wait");
       return;

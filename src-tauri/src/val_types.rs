@@ -1,22 +1,21 @@
 use serde::{Serialize, Deserialize};
+use wincode::{SchemaRead, SchemaWrite};
 
 
-#[derive(Clone, Copy)]
-pub enum BoardValues {
-    High = 1, Draw = 0, Low = -1, Null = 4
-}
-
-#[derive(Clone, Copy, PartialEq, Deserialize)]
+#[derive(Clone, Copy, Deserialize, SchemaWrite, SchemaRead, Debug, PartialEq)]
+#[repr(C)] 
 pub enum PlayerType { Maximizer, Minimizer }
 
-#[derive(Clone)]
+#[derive(Deserialize, Clone, SchemaWrite, SchemaRead, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[repr(C)] 
 pub struct Node {
   pub level_player: PlayerType,
   pub children: Vec<Node>,
   pub is_leaf: bool,
   pub is_root: bool,
   pub optimal_child: Option<Box<Node>>,
-  pub score: BoardValues,
+  pub score: Option<i32>,
   pub static_node_state: [[Option<PlayerType>; 3]; 3],
   pub depth: u32,
 }

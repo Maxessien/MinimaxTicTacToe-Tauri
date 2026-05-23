@@ -1,4 +1,4 @@
-use crate::val_types::{BoardValues, Node, Optimal, PlayerType};
+use crate::val_types::{Node, Optimal, PlayerType};
 
 pub fn get_empty_board() -> [[Option<PlayerType>; 3]; 3] {
     [[None, None, None], [None, None, None], [None, None, None]]
@@ -17,7 +17,7 @@ pub fn get_possible_outcomes(board: [[Option<PlayerType>; 3]; 3]) -> [[Option<Pl
     ]
 }
 
-pub fn check_state_value(board: [[Option<PlayerType>; 3]; 3]) -> BoardValues {
+pub fn check_state_value(board: [[Option<PlayerType>; 3]; 3]) -> Option<i32> {
     let all_wins = get_possible_outcomes(board);
     for win_dir in all_wins {
         if win_dir
@@ -26,8 +26,8 @@ pub fn check_state_value(board: [[Option<PlayerType>; 3]; 3]) -> BoardValues {
         {
             match win_dir[0] {
                 Some(val) => match val {
-                    PlayerType::Maximizer => return BoardValues::High,
-                    PlayerType::Minimizer => return BoardValues::Low,
+                    PlayerType::Maximizer => return Some(1),
+                    PlayerType::Minimizer => return Some(-1),
                 },
                 None => continue,
             };
@@ -38,9 +38,9 @@ pub fn check_state_value(board: [[Option<PlayerType>; 3]; 3]) -> BoardValues {
         .flatten()
         .all(|v| if let Some(_) = v { true } else { false })
     {
-        return BoardValues::Draw;
+        return Some(0);
     };
-    BoardValues::Null
+    None
 }
 
 pub fn compute_optimal<'a>(node: &mut Node) -> Optimal {
@@ -58,8 +58,8 @@ pub fn compute_optimal<'a>(node: &mut Node) -> Optimal {
         .iter_mut()
         .map(|v| compute_optimal(v))
         .reduce(|prev, curr| {
-            let prev_score = prev.optimal.score as u32;
-            let curr_score = curr.optimal.score as u32;
+            let prev_score = prev.optimal.score;
+            let curr_score = curr.optimal.score;
             let level_pl = node.level_player;
             if prev_score == curr_score {
                 return if prev.depth > curr.depth { curr } else { prev };
@@ -97,7 +97,7 @@ pub fn get_root_node() -> Node {
         is_root: true,
         level_player: PlayerType::Maximizer,
         optimal_child: None,
-        score: BoardValues::Null,
+        score: None,
         static_node_state: get_empty_board(),
     }
 }
