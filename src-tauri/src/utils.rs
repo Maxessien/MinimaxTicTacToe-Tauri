@@ -1,3 +1,9 @@
+use std::{fs::{File, create_dir_all, read}};
+
+use tauri::Manager;
+use wincode::deserialize;
+use zip::ZipArchive;
+
 use crate::val_types::{Node, Optimal, PlayerType};
 
 pub fn get_empty_board() -> [[Option<PlayerType>; 3]; 3] {
@@ -89,8 +95,31 @@ pub fn compute_optimal<'a>(node: &mut Node) -> Optimal {
     return optimal_child;
 }
 
-pub fn get_root_node() -> Node {
-    Node {
+const MAXIMIZER_BIN_FILE: &str = "maximizerTree.bin";
+const MINIMIZER_BIN_FILE: &str = "minimizerTree.bin";
+
+pub fn get_root_node(app: &tauri::AppHandle, player: PlayerType) -> Result<Node, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to get app data dir".to_string())?;
+
+    let player_path = app_data_dir.join(match player {
+        PlayerType::Maximizer => MAXIMIZER_BIN_FILE,
+        PlayerType::Minimizer => MINIMIZER_BIN_FILE,
+    });
+
+    if player_path.exists() {
+        let file = read(player_path).map_err(|_| "Failed to open game tree file".to_string())?;
+        let node = deserialize::<Node>(&file).map_err(|e|{
+            println!("Error deserialize {}", e);
+            "Failed to deserialize".to_string()
+        })?;
+
+        return  Ok(node);
+    };
+
+    Ok(Node {
         children: Vec::new(),
         depth: 0,
         is_leaf: false,
@@ -99,5 +128,42 @@ pub fn get_root_node() -> Node {
         optimal_child: None,
         score: None,
         static_node_state: get_empty_board(),
-    }
+    })
+}
+
+pub fn decompress_zip_files(app: &tauri::AppHandle) -> Result<(), String> {
+    let path = app
+        .path()
+        .resource_dir()
+        .map_err(|_| "Failed to resolve resources dir".to_string())?;    
+
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Failed to get app data dir".to_string())?;
+
+    let maximizer_zip = path.join("maximizerTree.zip");
+    let minimizer_zip = path.join("minimizerTree.zip");
+
+    if !app_data_dir.exists() {
+        create_dir_all(&app_data_dir).map_err(|_| "Failed to create app data directory".to_string())?;
+    };
+
+    let maximizer_file =
+        File::open(maximizer_zip).map_err(|_| "Failed to open maximizer file".to_string())?;
+    let minimizer_file =
+        File::open(minimizer_zip).map_err(|_| "Failed to open minimizer file".to_string())?;
+
+    let mut max_zip_file =
+        ZipArchive::new(maximizer_file).map_err(|_| "Failed to init zip archive".to_string())?;
+    let mut min_zip_file =
+        ZipArchive::new(minimizer_file).map_err(|_| "Failed to init zip archive".to_string())?;
+
+    max_zip_file
+        .extract(&app_data_dir)
+        .map_err(|_| "Failed to extract max tree file".to_string())?;
+    min_zip_file
+        .extract(&app_data_dir)
+        .map_err(|_| "Failed to extract min tree file".to_string())?;
+    Ok(())
 }

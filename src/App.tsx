@@ -1,7 +1,13 @@
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import LeafStatePopup from "./LeafStatePopup";
-import { BoardWithPlayers, Player, type BoardFieldVal } from "./utils/board";
+import {
+  BoardWithPlayers,
+  Player,
+  PlayerType,
+  type BoardFieldVal,
+} from "./utils/board";
 
 const board = new BoardWithPlayers();
 
@@ -27,21 +33,39 @@ const App = () => {
     }));
   };
 
-  const userPlay = async(player: Player, position: BoardFieldVal) => {
+  const userPlay = async (player: Player, position: BoardFieldVal) => {
     if (boardState.building) {
       toast.error("Game isn't ready, please wait");
       return;
     }
     const res = player.play(position);
     if (!res.success) toast.warn(res.message);
-    // worker.postMessage({ type: "new_board_state", value: board.getState() });
-    if (currentPlayer.botPlayer.hasTurn)
-      // worker.postMessage({ type: "make_move", value: null });
+    await invoke("set_node", { board: board.getState() });
+    updateState();
+    if (currentPlayer.botPlayer.hasTurn) await botPlay();
+  };
+
+  const botPlay = async () => {
+    const move: BoardFieldVal = await invoke("play_move");
+    currentPlayer.botPlayer.play(move);
+    await invoke("set_node", { board: board.getState() });
     updateState();
   };
 
   useEffect(() => {
-    // worker.postMessage({ type: "build_tree", value: null });
+    (async () => {
+      const opts: { player: PlayerType } = {
+        player: currentPlayer.botPlayer.hasTurn
+          ? currentPlayer.botPlayer.type
+          : currentPlayer.userPlayer.type,
+      };
+      await invoke("reset_bot", opts);
+      if (currentPlayer.botPlayer.hasTurn) {
+        await botPlay();
+      }
+      setBoardState((st) => ({ ...st, building: false }));
+    })();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -51,9 +75,10 @@ const App = () => {
     "0": "draw",
   };
 
-  const resetGame = () => {
-    // const type = board.resetBoard(true);
-    // worker.postMessage({ type: "reset_board_state", value: type });
+  const resetGame = async () => {
+    const type = board.resetBoard(true);
+    const opts: { player: PlayerType } = { player: type };
+    await invoke("reset_bot", opts);
     setBoardState((st) => ({ ...st, building: true }));
     updateState();
   };

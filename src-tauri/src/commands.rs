@@ -34,11 +34,11 @@ pub async fn set_node(
 }
 
 #[tauri::command]
-pub async fn reset_bot(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn reset_bot(app: tauri::AppHandle, player: PlayerType) -> Result<(), String> {
     let state = app.state::<Mutex<Node>>();
     let mut node = state
         .lock()
         .map_err(|_| "Failed to get app state".to_string())?;
-    *node = get_root_node();
-    Ok(())
-}
+    let n = get_root_node(&app, player)?;
+    *node = n;
+    Ok(())}

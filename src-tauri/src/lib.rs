@@ -1,6 +1,7 @@
 use std::sync::Mutex;
 
-use crate::utils::get_root_node;
+use crate::utils::get_empty_board;
+use crate::val_types::{Node, PlayerType};
 
 pub mod commands;
 pub mod minimax;
@@ -11,7 +12,16 @@ pub mod val_types;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(Mutex::new(get_root_node()))
+        .manage(Mutex::new(Node {
+        children: Vec::new(),
+        depth: 0,
+        is_leaf: false,
+        is_root: true,
+        level_player: PlayerType::Maximizer,
+        optimal_child: None,
+        score: None,
+        static_node_state: get_empty_board(),
+    }))
         .invoke_handler(tauri::generate_handler![
             commands::play_move,
             commands::set_node,
