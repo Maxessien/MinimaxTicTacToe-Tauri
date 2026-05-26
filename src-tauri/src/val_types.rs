@@ -14,14 +14,14 @@ pub struct Node {
   pub children: Vec<Node>,
   pub is_leaf: bool,
   pub is_root: bool,
-  pub optimal_child: Option<Box<Node>>,
+  pub optimal_child: Option<usize>,
   pub score: Option<i32>,
   pub static_node_state: [[Option<PlayerType>; 3]; 3],
   pub depth: u32,
 }
 
 #[derive(Clone)]
-pub struct Optimal {pub optimal: Node, pub depth: u32}
+pub struct Optimal<'a> {pub optimal: &'a Node, pub depth: u32}
 
 #[derive(Serialize)]
 pub struct BoardFieldVal {

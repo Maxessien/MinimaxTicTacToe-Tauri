@@ -1,4 +1,5 @@
-use std::{fs::{File, create_dir_all, read}};
+use std::fs::{create_dir_all, read, File};
+use tauri::path::BaseDirectory;
 
 use tauri::Manager;
 use wincode::deserialize;
@@ -49,60 +50,77 @@ pub fn check_state_value(board: [[Option<PlayerType>; 3]; 3]) -> Option<i32> {
     None
 }
 
-pub fn compute_optimal<'a>(node: &mut Node) -> Optimal {
+pub fn compute_optimal(node: &mut Node) -> Optimal<'_> {
     if node.is_leaf {
         let state_val = check_state_value(node.static_node_state);
         node.score = state_val;
         return Optimal {
-            optimal: node.clone(),
+            optimal: node,
             depth: node.depth,
         };
     };
 
+    let level_pl = node.level_player;
+
     let optimal_child = node
         .children
         .iter_mut()
-        .map(|v| compute_optimal(v))
-        .reduce(|prev, curr| {
-            let prev_score = prev.optimal.score;
-            let curr_score = curr.optimal.score;
-            let level_pl = node.level_player;
+        .map(|child| compute_optimal(child))
+        .enumerate()
+        .reduce(|(prev_idx, prev), (curr_idx, curr)| {
+            let prev_score = prev.optimal.score.unwrap();
+            let curr_score = curr.optimal.score.unwrap();
             if prev_score == curr_score {
-                return if prev.depth > curr.depth { curr } else { prev };
+                return if prev.depth <= curr.depth {
+                    (prev_idx, prev)
+                } else {
+                    (curr_idx, curr)
+                };
             };
             match level_pl {
                 PlayerType::Maximizer => {
                     if prev_score > curr_score {
-                        prev
+                        (prev_idx, prev)
                     } else {
-                        curr
+                        (curr_idx, curr)
                     }
                 }
                 _ => {
-                    if prev_score > curr_score {
-                        curr
+                    if prev_score < curr_score {
+                        (prev_idx, prev)
                     } else {
-                        prev
+                        (curr_idx, curr)
                     }
                 }
             }
-        })
-        .unwrap();
+        });
 
-    node.score = optimal_child.optimal.score;
-    node.optimal_child = Some(Box::new(optimal_child.optimal.clone()));
+    if let Some((idx, opt)) = optimal_child {
+        node.score = opt.optimal.score;
+        node.optimal_child = Some(idx);
 
-    return optimal_child;
+        return Optimal {
+            depth: opt.depth,
+            optimal: node,
+        };
+    };
+    return Optimal {
+        optimal: node,
+        depth: node.depth,
+    };
 }
 
-const MAXIMIZER_BIN_FILE: &str = "maximizerTree.bin";
-const MINIMIZER_BIN_FILE: &str = "minimizerTree.bin";
+pub const MAXIMIZER_BIN_FILE: &str = "maximizerTree.bin";
+pub const MINIMIZER_BIN_FILE: &str = "minimizerTree.bin";
 
 pub fn get_root_node(app: &tauri::AppHandle, player: PlayerType) -> Result<Node, String> {
     let app_data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|_| "Failed to get app data dir".to_string())?;
+        .map_err(|e| {
+            println!("Error getting app data dir: {}", e);
+            "Failed to get app data dir".to_string()
+        })?;
 
     let player_path = app_data_dir.join(match player {
         PlayerType::Maximizer => MAXIMIZER_BIN_FILE,
@@ -111,12 +129,12 @@ pub fn get_root_node(app: &tauri::AppHandle, player: PlayerType) -> Result<Node,
 
     if player_path.exists() {
         let file = read(player_path).map_err(|_| "Failed to open game tree file".to_string())?;
-        let node = deserialize::<Node>(&file).map_err(|e|{
+        let node = deserialize::<Node>(&file).map_err(|e| {
             println!("Error deserialize {}", e);
             "Failed to deserialize".to_string()
         })?;
 
-        return  Ok(node);
+        return Ok(node);
     };
 
     Ok(Node {
@@ -132,38 +150,62 @@ pub fn get_root_node(app: &tauri::AppHandle, player: PlayerType) -> Result<Node,
 }
 
 pub fn decompress_zip_files(app: &tauri::AppHandle) -> Result<(), String> {
-    let path = app
-        .path()
-        .resource_dir()
-        .map_err(|_| "Failed to resolve resources dir".to_string())?;    
-
     let app_data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|_| "Failed to get app data dir".to_string())?;
+        .map_err(|e| {
+            println!("Error getting app data dir {}", e);
+            "Failed to get app data dir".to_string()
+        })?;
 
-    let maximizer_zip = path.join("maximizerTree.zip");
-    let minimizer_zip = path.join("minimizerTree.zip");
+    let maximizer_zip = app
+        .path()
+        .resolve("resources/maximizerTree.zip", BaseDirectory::Resource)
+        .map_err(|e| {
+            println!("Error getting zip file {}", e);
+            "Failed to resolve maximizerTree.zip path".to_string()
+        })?;
+
+    let minimizer_zip = app
+        .path()
+        .resolve("resources/minimizerTree.zip", BaseDirectory::Resource)
+        .map_err(|e| {
+            println!("Error getting zip file {}", e);
+            "Failed to resolve minimizerTree.zip path".to_string()
+        })?;
 
     if !app_data_dir.exists() {
-        create_dir_all(&app_data_dir).map_err(|_| "Failed to create app data directory".to_string())?;
+        create_dir_all(&app_data_dir)
+            .map_err(|_| "Failed to create app data directory".to_string())?;
     };
 
-    let maximizer_file =
-        File::open(maximizer_zip).map_err(|_| "Failed to open maximizer file".to_string())?;
-    let minimizer_file =
-        File::open(minimizer_zip).map_err(|_| "Failed to open minimizer file".to_string())?;
+    let maximizer_file = File::open(&maximizer_zip).map_err(|e| {
+        println!("Error opening zip file at {:?}: {}", maximizer_zip, e);
+        "Failed to open maximizer file".to_string()
+    })?;
 
-    let mut max_zip_file =
-        ZipArchive::new(maximizer_file).map_err(|_| "Failed to init zip archive".to_string())?;
-    let mut min_zip_file =
-        ZipArchive::new(minimizer_file).map_err(|_| "Failed to init zip archive".to_string())?;
+    let minimizer_file = File::open(&minimizer_zip).map_err(|e| {
+        println!("Error opening zip file at {:?}: {}", minimizer_zip, e);
+        "Failed to open minimizer file".to_string()
+    })?;
+
+    let mut max_zip_file = ZipArchive::new(maximizer_file).map_err(|e| {
+        println!("Error creating archive struct: {}", e);
+        "Failed to init zip archive".to_string()
+    })?;
+
+    let mut min_zip_file = ZipArchive::new(minimizer_file).map_err(|e| {
+        println!("Error creating archive struct: {}", e);
+        "Failed to init zip archive".to_string()
+    })?;
 
     max_zip_file
         .extract(&app_data_dir)
         .map_err(|_| "Failed to extract max tree file".to_string())?;
+
     min_zip_file
         .extract(&app_data_dir)
         .map_err(|_| "Failed to extract min tree file".to_string())?;
+
     Ok(())
 }

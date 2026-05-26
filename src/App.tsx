@@ -79,8 +79,9 @@ const App = () => {
     const type = board.resetBoard(true);
     const opts: { player: PlayerType } = { player: type };
     await invoke("reset_bot", opts);
-    setBoardState((st) => ({ ...st, building: true }));
+    setBoardState((st) => ({ ...st, building: false }));
     updateState();
+    if (currentPlayer.botPlayer.hasTurn) await botPlay();
   };
 
   useEffect(() => {
