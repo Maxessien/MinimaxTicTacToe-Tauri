@@ -58,7 +58,6 @@ pub async fn reset_bot<'a>(state: State<'a, Mutex<Node>>, app: tauri::AppHandle,
     };
 
     let n = get_root_node(&app, player)?;
-    dbg!(&n.static_node_state);
     let mut node = state
         .lock()
         .map_err(|e| {

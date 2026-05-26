@@ -29,7 +29,7 @@ pub fn check_state_value(board: [[Option<PlayerType>; 3]; 3]) -> Option<i32> {
     for win_dir in all_wins {
         if win_dir
             .iter()
-            .all(|v| if let Some(_) = v { true } else { false })
+            .all(|v| if v == &win_dir[0] { true } else { false })
         {
             match win_dir[0] {
                 Some(val) => match val {
@@ -40,6 +40,7 @@ pub fn check_state_value(board: [[Option<PlayerType>; 3]; 3]) -> Option<i32> {
             };
         };
     }
+
     if all_wins
         .iter()
         .flatten()

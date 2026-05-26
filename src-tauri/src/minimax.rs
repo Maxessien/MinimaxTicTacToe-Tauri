@@ -19,7 +19,6 @@ pub fn make_move(node: &mut Node) -> BoardFieldVal {
     compute_optimal(node);
     let mut val = BoardFieldVal { col: 1, row: 1 };
     if let Some(n) = node.optimal_child.take() {
-        dbg!(node.children[n].static_node_state);
         let next_flat = node.children[n].static_node_state;
         for (idx, node_val) in node.static_node_state.iter().enumerate() {
             for (inn_idx, inn_node) in node_val.iter().enumerate() {

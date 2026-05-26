@@ -130,8 +130,8 @@ class Board {
   }
 
   checkStateValue(): 0 | 1 | -1 | null {
-    if (this.state.flat().every((v) => v)) return 0;
     const goalPl = this.getGoalPlayer();
+    if (this.state.flat().every((v) => v) && !goalPl) return 0;
     if (!goalPl) return null;
     else return goalPl === "Maximizer" ? 1 : -1;
   }
