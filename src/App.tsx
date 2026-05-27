@@ -54,16 +54,21 @@ const App = () => {
 
   useEffect(() => {
     (async () => {
-      const opts: { player: PlayerType } = {
-        player: currentPlayer.botPlayer.hasTurn
-          ? currentPlayer.botPlayer.type
-          : currentPlayer.userPlayer.type,
-      };
-      await invoke("reset_bot", opts);
-      if (currentPlayer.botPlayer.hasTurn) {
-        await botPlay();
+      try {
+        const opts: { player: PlayerType } = {
+          player: currentPlayer.botPlayer.hasTurn
+            ? currentPlayer.botPlayer.type
+            : currentPlayer.userPlayer.type,
+        };
+        await invoke("reset_bot", opts);
+        if (currentPlayer.botPlayer.hasTurn) {
+          await botPlay();
+        }
+        setBoardState((st) => ({ ...st, building: false }));
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to start game, close and reopen app");
       }
-      setBoardState((st) => ({ ...st, building: false }));
     })();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,12 +81,21 @@ const App = () => {
   };
 
   const resetGame = async () => {
-    const type = board.resetBoard(true);
-    const opts: { player: PlayerType } = { player: type };
-    await invoke("reset_bot", opts);
-    setBoardState((st) => ({ ...st, building: false }));
-    updateState();
-    if (currentPlayer.botPlayer.hasTurn) await botPlay();
+    try {
+      setBoardState((st) => ({ ...st, building: true }));
+      setHidePopup(true)
+
+      const type = board.resetBoard(true);
+      const opts: { player: PlayerType } = { player: type };
+      await invoke("reset_bot", opts);
+
+      setBoardState((st) => ({ ...st, building: false }));
+      updateState();
+      if (currentPlayer.botPlayer.hasTurn) await botPlay();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to reset game, close and reopen app");
+    }
   };
 
   useEffect(() => {
@@ -90,6 +104,10 @@ const App = () => {
     };
     show();
   }, [boardState.value]);
+
+  useEffect(()=>{
+    if (!boardState.building) toast.success("Game is ready!!!")
+  }, [boardState.building])
 
   return (
     <>

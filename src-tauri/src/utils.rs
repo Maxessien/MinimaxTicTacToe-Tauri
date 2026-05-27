@@ -1,7 +1,8 @@
-use std::fs::{create_dir_all, read, File};
+use std::fs::{create_dir_all, read};
 use tauri::path::BaseDirectory;
 
 use tauri::Manager;
+use tauri_plugin_fs::{FsExt, OpenOptions};
 use wincode::deserialize;
 use zip::ZipArchive;
 
@@ -159,7 +160,8 @@ pub fn decompress_zip_files(app: &tauri::AppHandle) -> Result<(), String> {
             "Failed to get app data dir".to_string()
         })?;
 
-    let maximizer_zip = app
+        
+        let maximizer_zip = app
         .path()
         .resolve("resources/maximizerTree.zip", BaseDirectory::Resource)
         .map_err(|e| {
@@ -174,18 +176,23 @@ pub fn decompress_zip_files(app: &tauri::AppHandle) -> Result<(), String> {
             println!("Error getting zip file {}", e);
             "Failed to resolve minimizerTree.zip path".to_string()
         })?;
-
-    if !app_data_dir.exists() {
-        create_dir_all(&app_data_dir)
+        
+        if !app_data_dir.exists() {
+            create_dir_all(&app_data_dir)
             .map_err(|_| "Failed to create app data directory".to_string())?;
     };
 
-    let maximizer_file = File::open(&maximizer_zip).map_err(|e| {
+    let fs_scope = app.fs();
+
+    let mut opts = OpenOptions::new();
+    opts.read(true);
+
+    let maximizer_file = fs_scope.open(&maximizer_zip, opts.clone()).map_err(|e| {
         println!("Error opening zip file at {:?}: {}", maximizer_zip, e);
         "Failed to open maximizer file".to_string()
     })?;
 
-    let minimizer_file = File::open(&minimizer_zip).map_err(|e| {
+    let minimizer_file = fs_scope.open(&minimizer_zip, opts).map_err(|e| {
         println!("Error opening zip file at {:?}: {}", minimizer_zip, e);
         "Failed to open minimizer file".to_string()
     })?;

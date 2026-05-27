@@ -12,16 +12,17 @@ pub mod val_types;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_fs::init())
         .manage(Mutex::new(Node {
-        children: Vec::new(),
-        depth: 0,
-        is_leaf: false,
-        is_root: true,
-        level_player: PlayerType::Maximizer,
-        optimal_child: None,
-        score: None,
-        static_node_state: get_empty_board(),
-    }))
+            children: Vec::new(),
+            depth: 0,
+            is_leaf: false,
+            is_root: true,
+            level_player: PlayerType::Maximizer,
+            optimal_child: None,
+            score: None,
+            static_node_state: get_empty_board(),
+        }))
         .invoke_handler(tauri::generate_handler![
             commands::play_move,
             commands::set_node,
