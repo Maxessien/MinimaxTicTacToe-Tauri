@@ -85,12 +85,12 @@ jobs:
       - name: Build Android
         run: npm run tauri android build -- --apk
         
-      # New Step: Securely sign the APK using your GitHub secrets
+        # 1. Securely sign the APK using the correct universal folder path
       - name: Sign Android APK
         id: sign_app
         uses: r0adkll/sign-android-release@v1
         with:
-          releaseDirectory: src-tauri/gen/android/app/build/outputs/apk/release
+          releaseDirectory: src-tauri/gen/android/app/build/outputs/apk/universal/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -98,7 +98,7 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "34.0.0"
 
-      # Modified Step: Upload only the signed file to your GitHub release draft
+      # 2. Upload only the signed file to your GitHub release draft
       - name: Upload Signed Android APK to Release
         uses: softprops/action-gh-release@v2
         with:
