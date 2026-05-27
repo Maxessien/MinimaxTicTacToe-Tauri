@@ -62,25 +62,45 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      
       - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          
       - name: install java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
+          
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, x86_64-linux-android
+          
       - name: install frontend dependencies
         run: npm install
+        
       - name: Build Android
         run: npm run tauri android build -- --apk
-      - name: Upload Android APK
+        
+      # New Step: Securely sign the APK using your GitHub secrets
+      - name: Sign Android APK
+        id: sign_app
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: src-tauri/gen/android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+
+      # Modified Step: Upload only the signed file to your GitHub release draft
+      - name: Upload Signed Android APK to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          files: ${{ steps.sign_app.outputs.signedReleaseFile }}
